@@ -1,10 +1,15 @@
 import {
+  DEFAULT_ROUTER_API_KEY,
+  DEFAULT_ROUTER_BASE_URL,
+  DEFAULT_ROUTER_MODEL,
   isRecapProvider,
   type GeneratorChoice,
   type GeneratorMode,
   type ModelPlan,
   type ModelRef,
   type RecapProvider,
+  type RouterGeneration,
+  type RouterInputs,
 } from "../shared/recap";
 import { asRecord } from "./json";
 
@@ -20,6 +25,8 @@ export interface GeneratorCandidate {
   model: string | null;
   /** Executable followed by fixed leading arguments. */
   command: readonly [string, ...string[]];
+  /** Router connection details; present only on `router` candidates. */
+  router?: RouterGeneration;
 }
 
 /** Subset of daemon config read here; validated loosely because provider entries are open-ended. */
@@ -39,6 +46,8 @@ export interface GeneratorInputs {
   config: GeneratorConfig;
   /** `paseo.providers.snapshot().entries`: the providers and models installed on this host. */
   providers: readonly ProviderModels[];
+  /** Router connection settings; when enabled, `auto` puts the router first. */
+  router?: RouterInputs;
 }
 
 /**
@@ -65,6 +74,10 @@ export function resolveCandidates(
     const own = agentProvider ? byProvider.get(agentProvider) : undefined;
     const ownSmall = own ? smallModel(own) : null;
     ordered = [
+      // The router needs no Paseo provider discovery, so it can lead the list when enabled.
+      ...(choice === "auto" && inputs.router?.enabled
+        ? [{ provider: "router" as RecapProvider, model: DEFAULT_ROUTER_MODEL }]
+        : []),
       ...(choice === "auto" && own && ownSmall ? [{ provider: own.provider, model: ownSmall }] : []),
       ...configuredModels(inputs.config, byProvider),
       ...PASEO_SMALL_MODELS.flatMap((needle) => {
@@ -83,6 +96,18 @@ export function resolveCandidates(
     const key = `${provider}\u0000${model ?? ""}`;
     if (seen.has(key)) continue;
     seen.add(key);
+    if (provider === "router") {
+      candidates.push({
+        provider,
+        model,
+        command: ["router"],
+        router: {
+          baseUrl: inputs.router?.baseUrl ?? DEFAULT_ROUTER_BASE_URL,
+          apiKey: inputs.router?.apiKey ?? DEFAULT_ROUTER_API_KEY,
+        },
+      });
+      continue;
+    }
     const providerConfig = asRecord(inputs.config.providers?.[provider]);
     candidates.push({ provider, model, command: configuredCommand(providerConfig?.command) ?? [provider] });
   }
@@ -95,11 +120,16 @@ export function describeModelPlan(choice: GeneratorMode | GeneratorChoice, input
     candidates.map(({ provider, model }) => ({ provider, model }));
   const fallback = refs(resolveCandidates(choice === "auto" ? "metadata" : choice, inputs));
   if (choice !== "auto") return { perProvider: [], fallback };
+  // The router leads `auto` when enabled, so it leads the displayed plan too.
+  const withRouter =
+    inputs.router?.enabled && !fallback.some((ref) => ref.provider === "router")
+      ? [{ provider: "router" as const, model: DEFAULT_ROUTER_MODEL }, ...fallback]
+      : fallback;
   // What each provider's agents try first; a provider without a small model just uses the fallback.
   const perProvider = inputs.providers.flatMap((entry) =>
     refs(resolveCandidates("auto", inputs, entry.provider).slice(0, 1)).filter((ref) => ref.provider === entry.provider),
   );
-  return { perProvider, fallback };
+  return { perProvider, fallback: withRouter };
 }
 
 /** Configured metadata models on enabled providers; without a model, the provider's default model. */

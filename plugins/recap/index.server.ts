@@ -19,9 +19,15 @@ import {
   recapSettings,
   type RecapSettings,
   type RecapTimelineData,
+  type RouterInputs,
 } from "./shared/recap";
 
 const TIMELINE_FETCH_LIMIT = 500;
+
+/** Router connection settings for candidate resolution; defaults keep it on for `auto`. */
+function routerInputs(settings: RecapSettings): RouterInputs {
+  return { enabled: settings.routerEnabled, baseUrl: settings.routerBaseUrl, apiKey: settings.routerApiKey };
+}
 
 function log(message: string, detail?: unknown): void {
   if (detail === undefined) console.error(`[paseo-recap] ${message}`);
@@ -71,7 +77,7 @@ export default function contribute(server: PluginServerContext) {
     log,
     async generate(prompt, signal, { agentProvider, trigger }) {
       const [inputs, current] = await Promise.all([readGeneratorInputs(requirePaseo()), readSettings()]);
-      let candidates = resolveCandidates(current.generator, inputs, agentProvider);
+      let candidates = resolveCandidates(current.generator, { ...inputs, router: routerInputs(current) }, agentProvider);
       if (trigger === "auto" && candidates.length > 0) {
         const nearLimit = await usage.nearLimit();
         const allowed = candidates.filter((candidate) => !nearLimit.has(candidate.provider));
@@ -149,7 +155,8 @@ export default function contribute(server: PluginServerContext) {
   });
   server.handle(recapModelPlanRpc, async ({ generator }, context) => {
     paseo = context.paseo;
-    return describeModelPlan(generator, await readGeneratorInputs(context.paseo));
+    const [inputs, settings] = await Promise.all([readGeneratorInputs(context.paseo), readSettings()]);
+    return describeModelPlan(generator, { ...inputs, router: routerInputs(settings) });
   });
   server.handle(recapRegenerateRpc, async ({ agentId }, context) => {
     paseo = context.paseo;

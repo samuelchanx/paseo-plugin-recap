@@ -40,13 +40,16 @@ const MODEL_SOURCE_OPTIONS: ReadonlyArray<{ label: string; value: ModelSource }>
 ];
 
 const MODE_HINTS: Record<GeneratorMode, string> = {
-  auto: "Recaps use the agent's own provider when it has a small model, so the conversation stays with the vendor you chose. Otherwise they pick a model the way Paseo's Metadata generation does.",
+  auto: "Recaps use the router (if enabled), then the agent's own provider when it has a small model, so the conversation stays with the vendor you chose. Otherwise they pick a model the way Paseo's Metadata generation does.",
   metadata:
     "Recaps pick a model the way Paseo's Metadata generation does: the models set there, then Paseo's small models that are installed.",
 };
 const CLI_HINT = " Runs the provider's CLI on this computer with your existing login.";
+const ROUTER_HINT =
+  " Calls an Anthropic-compatible messages API directly — the local claude-router by default. No CLI login needed.";
 
 function modelSourceHint(source: ModelSource): string {
+  if (source === "router") return `Recaps always use ${RECAP_PROVIDERS.router.label}.${ROUTER_HINT}`;
   const hint = isRecapProvider(source) ? `Recaps always use ${RECAP_PROVIDERS[source].label}.` : MODE_HINTS[source];
   return hint + CLI_HINT;
 }
@@ -247,27 +250,65 @@ function RecapSettingsForm({ settings }: { settings: ReadySettings }) {
             onValueChange={(next) => save({ generator: generatorFor(next) })}
           />
           {source === "auto" || source === "metadata" ? null : (
-            <ValidatedInput
-              // Remount per provider so the field shows the newly selected provider's model.
-              key={source}
-              label="Model name"
-              hint="Any model id the CLI accepts. Leave empty for the provider's small model from Paseo's list, or the CLI's default."
-              initialValue={model}
-              placeholder="Small model"
-              disabled={false}
-              parse={(text) => {
-                const trimmed = text.trim();
-                if (trimmed !== "" && (trimmed.length > 200 || !MODEL_ID_PATTERN.test(trimmed))) {
-                  return { error: "Use letters, digits, and . _ : / @ + - only, without spaces." };
+            <>
+              <ValidatedInput
+                // Remount per provider so the field shows the newly selected provider's model.
+                key={source}
+                label="Model name"
+                hint={
+                  source === "router"
+                    ? "Model id the router serves. Leave empty for glm-5.3-flash."
+                    : "Any model id the CLI accepts. Leave empty for the provider's small model from Paseo's list, or the CLI's default."
                 }
-                return { value: trimmed };
-              }}
-              onValid={(next) => {
-                if (next !== model) {
-                  save({ generator: next === "" ? { provider: source } : { provider: source, model: next } });
-                }
-              }}
-            />
+                initialValue={model}
+                placeholder={source === "router" ? "glm-5.3-flash" : "Small model"}
+                disabled={false}
+                parse={(text) => {
+                  const trimmed = text.trim();
+                  if (trimmed !== "" && (trimmed.length > 200 || !MODEL_ID_PATTERN.test(trimmed))) {
+                    return { error: "Use letters, digits, and . _ : / @ + - only, without spaces." };
+                  }
+                  return { value: trimmed };
+                }}
+                onValid={(next) => {
+                  if (next !== model) {
+                    save({ generator: next === "" ? { provider: source } : { provider: source, model: next } });
+                  }
+                }}
+              />
+              {source === "router" ? (
+                <>
+                  <ValidatedInput
+                    label="Router URL"
+                    hint="Anthropic-compatible server root, without /v1."
+                    initialValue={values.routerBaseUrl}
+                    disabled={false}
+                    parse={(text) => {
+                      const trimmed = text.trim();
+                      if (!/^https?:\/\//.test(trimmed)) return { error: "Use an http(s) URL without a /v1 suffix." };
+                      return { value: trimmed };
+                    }}
+                    onValid={(next) => {
+                      if (next !== values.routerBaseUrl) save({ routerBaseUrl: next });
+                    }}
+                  />
+                  <ValidatedInput
+                    label="Router API key"
+                    hint="Sent as the x-api-key header. The local router accepts any value."
+                    initialValue={values.routerApiKey}
+                    disabled={false}
+                    parse={(text) => {
+                      const trimmed = text.trim();
+                      if (trimmed === "") return { error: "Enter the key the router expects." };
+                      return { value: trimmed };
+                    }}
+                    onValid={(next) => {
+                      if (next !== values.routerApiKey) save({ routerApiKey: next });
+                    }}
+                  />
+                </>
+              ) : null}
+            </>
           )}
           <SettingsRow
             label="Will use"

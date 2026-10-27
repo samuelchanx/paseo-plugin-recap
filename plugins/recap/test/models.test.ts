@@ -46,6 +46,20 @@ describe("resolveCandidates", () => {
     expect(refs(resolveCandidates({ provider: "claude" }, inputs()))).toEqual([["claude", "claude-haiku-4-5"]]);
     expect(refs(resolveCandidates({ provider: "codex" }, inputs()))).toEqual([["codex", null]]);
   });
+
+  it("leads auto with the router when enabled and skips it otherwise; explicit Router choice needs no snapshot entry", () => {
+    const router = { enabled: true, baseUrl: "http://127.0.0.1:8787", apiKey: "local" };
+    expect(refs(resolveCandidates("auto", { ...inputs(), router }))[0]).toEqual(["router", "glm-5.3-flash"]);
+    expect(refs(resolveCandidates("auto", inputs()))[0]).not.toEqual(["router", "glm-5.3-flash"]);
+    // No "router" provider exists in the snapshot; an explicit choice still resolves with connection details.
+    const [candidate] = resolveCandidates({ provider: "router", model: "glm-5.3-flash" }, inputs());
+    expect(candidate).toEqual({
+      provider: "router",
+      model: "glm-5.3-flash",
+      command: ["router"],
+      router: { baseUrl: "http://127.0.0.1:8787", apiKey: "local" },
+    });
+  });
 });
 
 describe("describeModelPlan", () => {

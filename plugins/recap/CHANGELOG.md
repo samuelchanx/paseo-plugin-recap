@@ -1,3 +1,9 @@
+## [0.3.0](https://github.com/kingsleydon/paseo-plugins/compare/recap-v0.2.5...recap-v0.3.0) (2026-10-28)
+
+### Features
+
+* **Router provider:** recaps can call an Anthropic-compatible messages API directly — no CLI login needed. Added for GLM via a local router (`http://127.0.0.1:8787`, `glm-5.3-flash`). In `auto` an enabled router leads the candidate list; picking Router in settings forces it; connection details are editable in settings. Router failures fall through to the CLI candidates as before.
+
 # Changelog
 
 ## [0.2.5](https://github.com/kingsleydon/paseo-plugins/compare/recap-v0.2.4...recap-v0.2.5) (2026-10-27)

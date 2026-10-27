@@ -33,6 +33,35 @@ describe("RecapGenerator", () => {
     );
     expect(calls).toEqual(["claude"]);
   });
+
+  it("generates from the router over HTTP without spawning any CLI", async () => {
+    const calls: string[] = [];
+    const fake: RunProcess = async (command) => {
+      calls.push(command);
+      if (command === "claude") throw new GeneratorUnavailableError("claude not found");
+      return { code: 0, stdout: "", stderr: "" };
+    };
+    const fetchFn = (async () =>
+      new Response(JSON.stringify({ content: [{ type: "text", text: '{"summary":"Via router","next_action":null}' }] }), {
+        status: 200,
+      })) as typeof fetch;
+    const generator = new RecapGenerator({
+      runProcess: fake,
+      env: {},
+      tempRoot: tmpdir(),
+      now: () => 0,
+      log: () => undefined,
+      fetchFn,
+    });
+    const candidates: GeneratorCandidate[] = [
+      { provider: "claude", model: null, command: ["claude"] },
+      { provider: "router", model: "glm-5.3-flash", command: ["router"], router: { baseUrl: "http://127.0.0.1:8787", apiKey: "local" } },
+    ];
+    const recap = await generator.generate("p", candidates, new AbortController().signal);
+    expect(recap).toMatchObject({ provider: "router", model: "glm-5.3-flash", summary: "Via router" });
+    // The unavailable CLI was tried first, then the router answered over HTTP.
+    expect(calls).toEqual(["claude"]);
+  });
 });
 
 describe("RecapGenerator queue and cleanup", () => {

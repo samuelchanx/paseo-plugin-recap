@@ -2,6 +2,10 @@ Recap writes a short note on where each agent stands, like the session recap in 
 
 Recaps work with every provider Paseo runs, including Claude, Codex, OpenCode, OMP, Pi, and custom agents. The recap line is display only and never becomes part of the agent's context.
 
+## Models
+
+Recaps are written by a small model, never the agent's own model. The Model setting picks where they come from: Same as agent, Metadata model, Claude, Codex, OpenCode, or Router (GLM). Router is a fork addition: it calls an Anthropic-compatible messages API directly instead of a CLI, so no CLI login is needed. By default it points at a local router serving `glm-5.3-flash`, and an enabled Router leads the Same as agent order, with the CLI options falling back if it cannot be reached. The Router URL, API key, and model are editable in settings.
+
 ## Setup
 
 Recaps are written by a command line tool on the host running the Paseo daemon. At least one of `claude`, `codex`, or `opencode` must be on the daemon's `PATH` and logged in. Recaps use that existing login, so they count toward the same plan or API usage.

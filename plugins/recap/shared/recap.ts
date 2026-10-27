@@ -8,11 +8,32 @@ export const RECAP_PROVIDERS = {
   claude: { label: "Claude" },
   codex: { label: "Codex" },
   opencode: { label: "OpenCode" },
+  /** Not a CLI: calls an Anthropic-compatible messages API directly (fork addition: local claude-router → GLM). */
+  router: { label: "Router (GLM)" },
 } as const satisfies Record<string, { label: string }>;
 export type RecapProvider = keyof typeof RECAP_PROVIDERS;
 
 export function isRecapProvider(value: string): value is RecapProvider {
   return Object.keys(RECAP_PROVIDERS).includes(value);
+}
+
+// Router ---------------------------------------------------------------------------------------
+
+export const DEFAULT_ROUTER_BASE_URL = "http://127.0.0.1:8787";
+export const DEFAULT_ROUTER_API_KEY = "local";
+export const DEFAULT_ROUTER_MODEL = "glm-5.3-flash";
+
+/** Router connection settings, read from the plugin settings and attached to router candidates. */
+export interface RouterInputs {
+  enabled: boolean;
+  baseUrl: string;
+  apiKey: string;
+}
+
+/** Per-candidate router connection details; `undefined` falls back to the defaults above. */
+export interface RouterGeneration {
+  baseUrl: string;
+  apiKey: string;
 }
 
 // Settings -------------------------------------------------------------------------------------
@@ -66,6 +87,16 @@ export const recapSettings = defineSettings({
     includeSubagents: z.boolean().default(false),
     /** Hold a parent's recap while its subagents run (at most 10 minutes), as Claude Code does. */
     waitForSubagents: z.boolean().default(false),
+    /** Router (Anthropic-compatible messages API): tried first in `auto`, and always for an explicit Router choice. */
+    routerEnabled: z.boolean().default(true),
+    /** Server root, without `/v1`; the plugin appends `/v1/messages`. */
+    routerBaseUrl: z
+      .string()
+      .trim()
+      .refine((value) => /^https?:\/\//.test(value), "Use an http(s) URL without a /v1 suffix")
+      .default(DEFAULT_ROUTER_BASE_URL),
+    /** Sent as the `x-api-key` header. */
+    routerApiKey: z.string().trim().min(1).default(DEFAULT_ROUTER_API_KEY),
   }),
 });
 export type RecapSettings = z.output<typeof recapSettings.schema>;

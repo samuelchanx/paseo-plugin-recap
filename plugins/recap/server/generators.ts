@@ -5,6 +5,8 @@ import { abortError, errorMessage, GeneratorUnavailableError, NoGeneratorError }
 import type { GeneratorCandidate } from "./models";
 import { sanitizeEnv, type ProcessResult, type RunProcess } from "./process";
 import { RECAP_JSON_SCHEMA, type ParsedRecap } from "./prompt";
+import { DEFAULT_ROUTER_API_KEY, DEFAULT_ROUTER_BASE_URL, DEFAULT_ROUTER_MODEL } from "../shared/recap";
+import { generateRouterRecap } from "./router";
 
 const GENERATE_TIMEOUT_MS = 60_000;
 /** Many agents can finish at once; recaps queue instead of spawning a CLI per agent. */
@@ -23,6 +25,8 @@ export interface GeneratorDeps {
   tempRoot: string;
   now: () => number;
   log: (message: string, detail?: unknown) => void;
+  /** Injectable for tests; defaults to global fetch (router provider). */
+  fetchFn?: typeof fetch;
 }
 
 /**
@@ -119,6 +123,18 @@ export class RecapGenerator {
     prompt: string,
     signal: AbortSignal,
   ): Promise<ParsedRecap> {
+    // No CLI, no workdir: the router talks HTTP straight to the messages API.
+    if (candidate.provider === "router") {
+      return generateRouterRecap({
+        baseUrl: candidate.router?.baseUrl ?? DEFAULT_ROUTER_BASE_URL,
+        apiKey: candidate.router?.apiKey ?? DEFAULT_ROUTER_API_KEY,
+        model: candidate.model ?? DEFAULT_ROUTER_MODEL,
+        prompt,
+        signal,
+        timeoutMs: GENERATE_TIMEOUT_MS,
+        fetchFn: this.#deps.fetchFn,
+      });
+    }
     const workdir = await mkdtemp(join(this.#deps.tempRoot, "run-"));
     const [executable, ...leading] = candidate.command;
     const env = sanitizeEnv(this.#deps.env);
