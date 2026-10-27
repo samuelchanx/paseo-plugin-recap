@@ -1,5 +1,12 @@
 # Paseo plugins
 
+> **Samuel's fork** of [kingsleydon/paseo-plugins](https://github.com/kingsleydon/paseo-plugins).
+> Recap adds a **Router (GLM)** provider: recaps call an Anthropic-compatible messages API directly —
+> no CLI login needed. Defaults to a local router serving `glm-5.3-flash`; an enabled Router leads
+> the "Same as agent" order, with the CLI providers falling back. Install from this fork with
+> `paseo plugin install github:samuelchanx/paseo-plugin-recap:plugins/recap`.
+> Everything else matches upstream.
+
 Plugins for [Paseo](https://github.com/getpaseo/paseo) by [Kingsley](https://github.com/kingsleydon).
 
 | Plugin | What it does | npm | Source |
