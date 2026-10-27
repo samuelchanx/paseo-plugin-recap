@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { providersNearLimit, UsageGuard } from "../server/usage";
+import { nearLimitKey, providersNearLimit, UsageGuard } from "../server/usage";
+
+describe("nearLimitKey", () => {
+  it("reports the router under the provider it shares a quota pool with", () => {
+    expect(nearLimitKey("router")).toBe("zcode-native");
+    expect(nearLimitKey("codex")).toBe("codex");
+  });
+});
 
 describe("providersNearLimit", () => {
   it("flags providers with any window at or above the threshold", () => {

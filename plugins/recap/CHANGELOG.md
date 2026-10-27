@@ -1,3 +1,10 @@
+## [0.3.1](https://github.com/kingsleydon/paseo-plugins/compare/recap-v0.3.0...recap-v0.3.1) (2026-10-28)
+
+### Fixes
+
+* **Router:** send `thinking: {"type": "disabled"}` — a recap is one-shot JSON, and thinking spends output-rate credits (matches the CLI paths' low/no thinking).
+* **Usage guard:** auto recaps via the Router now skip when the zcode-native provider (same quota pool) is near its limit, instead of never being throttled.
+
 ## [0.3.0](https://github.com/kingsleydon/paseo-plugins/compare/recap-v0.2.5...recap-v0.3.0) (2026-10-28)
 
 ### Features

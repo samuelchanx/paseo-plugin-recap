@@ -4,6 +4,15 @@ import { errorMessage } from "./errors";
 const USAGE_SKIP_PERCENT = 90;
 const USAGE_CACHE_MS = 5 * 60_000;
 
+/**
+ * Providers that share one quota pool report under the Paseo provider they mirror. The router
+ * (fork addition) rides the same BigModel coding plan as the zcode-native provider, so the
+ * plan's near-limit state throttles auto recaps on both.
+ */
+export function nearLimitKey(provider: string): string {
+  return provider === "router" ? "zcode-native" : provider;
+}
+
 /** Minimal shape of Paseo's provider usage report (`paseo.providers.listUsage()`). */
 export interface ProviderUsage {
   providerId: string;

@@ -9,7 +9,7 @@ import type { PaseoApi } from "./server/paseo-types";
 import { runProcess } from "./server/process";
 import { RecapScheduler } from "./server/scheduler";
 import { RecapStore } from "./server/store";
-import { UsageGuard } from "./server/usage";
+import { nearLimitKey, UsageGuard } from "./server/usage";
 import {
   RECAP_TIMELINE_KIND,
   recapGetRpc,
@@ -80,7 +80,7 @@ export default function contribute(server: PluginServerContext) {
       let candidates = resolveCandidates(current.generator, { ...inputs, router: routerInputs(current) }, agentProvider);
       if (trigger === "auto" && candidates.length > 0) {
         const nearLimit = await usage.nearLimit();
-        const allowed = candidates.filter((candidate) => !nearLimit.has(candidate.provider));
+        const allowed = candidates.filter((candidate) => !nearLimit.has(nearLimitKey(candidate.provider)));
         if (allowed.length === 0) throw new RecapSkippedError("recap models are near their usage limit");
         candidates = allowed;
       }

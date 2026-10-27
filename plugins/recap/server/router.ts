@@ -77,6 +77,9 @@ async function requestText(
     body: JSON.stringify({
       model,
       max_tokens: MAX_TOKENS,
+      // A recap is one-shot JSON; thinking only spends output-rate credits (the CLI paths pin
+      // codex effort low and disable Claude thinking for the same reason).
+      thinking: { type: "disabled" },
       system: RECAP_SYSTEM_PROMPT,
       messages: [{ role: "user", content: prompt }],
     }),

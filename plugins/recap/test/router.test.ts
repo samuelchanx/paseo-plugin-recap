@@ -34,6 +34,7 @@ describe("generateRouterRecap", () => {
     expect(body).toMatchObject({
       model: "glm-5.3-flash",
       max_tokens: 8192,
+      thinking: { type: "disabled" },
       messages: [{ role: "user", content: "p" }],
     });
     expect(calls[0]?.init.headers).toMatchObject({ "x-api-key": "k" });
